@@ -1,0 +1,99 @@
+name: Release
+
+# Builds the app for macOS on Apple Silicon and publishes it as a GitHub release tagged with
+# the version in VERSION (e.g. v0.1.0). Pushes without a version bump replace the zip of the
+# existing release and move its tag. The release notes are the section of the version in
+# CHANGELOG.md.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and release (macOS arm64)
+    runs-on: macos-15
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          version=$(cat VERSION)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::unexpected version '$version'"
+            exit 1
+          fi
+          awk -v heading="## $version" '
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' > changes.md
+          if [[ ! -s changes.md ]]; then
+            echo "::error::CHANGELOG.md has no section '## $version'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "client=$(cat CLIENT_VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: swift test
+
+      - name: Build app
+        run: ./scripts/build-app.sh
+
+      - name: Check bundle
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          app="build/PBS Timekeeper.app"
+          test "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" = "$VERSION"
+          "$app/Contents/MacOS/proxmox-backup-client" version
+
+      - name: Publish release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+          CLIENT: ${{ steps.version.outputs.client }}
+        run: |
+          zip="build/PBS-Timekeeper-${VERSION}-macos-arm64.zip"
+          (cd build && shasum -a 256 "$(basename "$zip")" > "$(basename "$zip").sha256")
+
+          cat > notes.md <<EOF
+          PBS Timekeeper ${VERSION} for macOS 14 or newer on Apple Silicon, with proxmox-backup-client ${CLIENT}.
+
+          Built from ${GITHUB_SHA}.
+
+          - Browsing backups requires [FUSE-T](https://www.fuse-t.org), backing up and restoring works without it.
+          - The app is not notarized. After downloading, remove the quarantine attribute before the first start:
+            \`xattr -dr com.apple.quarantine "/Applications/PBS Timekeeper.app"\`
+
+          ## Changes
+
+          EOF
+          cat changes.md >> notes.md
+
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            git tag -f "$TAG" "$GITHUB_SHA"
+            git push -f origin "refs/tags/$TAG"
+            gh release upload "$TAG" "$zip" "$zip.sha256" --clobber
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" "$zip" "$zip.sha256" \
+              --target "$GITHUB_SHA" \
+              --title "PBS Timekeeper ${VERSION}" \
+              --notes-file notes.md
+          fi
