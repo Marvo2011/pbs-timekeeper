@@ -301,3 +301,36 @@ final class LineSink: @unchecked Sendable {
         #expect(BackupProgress(line: "skipping online-only file: \"x\"") == nil)
     }
 }
+
+@Suite struct EncryptionKeyTests {
+    @Test func readsKeyInfoAndMovesAside() throws {
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appending(path: "tk-\(UUID().uuidString)")
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: dir) }
+        let key = dir.appending(path: "encryption-key.json")
+        try #"{"kdf":null,"created":"2026-11-20T11:09:34+01:00","modified":"2026-11-20T11:09:34+01:00","data":"x","fingerprint":"33:67:2c:2a:ef:ef:c4:f1:4b:c6"}"#
+            .write(to: key, atomically: true, encoding: .utf8)
+        let info = try #require(EncryptionKey.info(at: key.path))
+        #expect(!info.passwordProtected)
+        #expect(info.shortFingerprint == "33:67:2c:2a:ef:ef:c4:f1")
+
+        let protected = dir.appending(path: "p.json")
+        try #"{"kdf":{"Scrypt":{"n":65536,"r":8,"p":1,"salt":"aa"}},"data":"x","fingerprint":"aa:bb"}"#
+            .write(to: protected, atomically: true, encoding: .utf8)
+        #expect(EncryptionKey.info(at: protected.path)?.passwordProtected == true)
+        #expect(EncryptionKey.info(at: dir.appending(path: "missing").path) == nil)
+
+        let now = Date(timeIntervalSince1970: 1_795_169_374)
+        let moved = try #require(try EncryptionKey.moveAside(key, now: now))
+        #expect(!fm.fileExists(atPath: key.path))
+        #expect(moved.lastPathComponent.hasPrefix("encryption-key-2026"))
+        #expect(try EncryptionKey.moveAside(key) == nil)
+    }
+
+    @Test func commands() {
+        let builder = CommandBuilder(config: AppConfig(backupID: "mac"), secrets: Secrets(), baseEnvironment: [:])
+        #expect(builder.createKey(at: URL(fileURLWithPath: "/k.json")).arguments == ["key", "create", "/k.json", "--kdf", "none"])
+        #expect(builder.paperKey(at: "/k.json", subject: "S").arguments == ["key", "paperkey", "/k.json", "--output-format", "html", "--subject", "S"])
+    }
+}

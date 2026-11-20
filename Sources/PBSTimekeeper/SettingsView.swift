@@ -95,6 +95,8 @@ private struct ServerSettingsView: View {
     @State private var encryptionPassword = Keychain.get(.encryptionPassword) ?? ""
     @State private var testResult: String?
     @State private var testing = false
+    @State private var showCreateKey = false
+    @State private var showPaperKey = false
 
     var body: some View {
         @Bindable var model = model
@@ -111,12 +113,30 @@ private struct ServerSettingsView: View {
                     .font(.system(.body, design: .monospaced))
             }
             Section("Encryption") {
+                let keyInfo = EncryptionKey.info(at: model.config.keyfile)
+                if model.config.keyfile.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Label("Backups are not encrypted.", systemImage: "lock.open")
+                        .foregroundStyle(.orange)
+                    Button("Create Encryption Key…") { showCreateKey = true }
+                } else if let keyInfo {
+                    Label("Encrypted with key \(keyInfo.shortFingerprint)", systemImage: "lock.fill")
+                        .foregroundStyle(.green)
+                    HStack {
+                        Button("Show Paper Key…") { showPaperKey = true }
+                        Button("Create New Key…") { showCreateKey = true }
+                    }
+                } else {
+                    Label("The key file cannot be read.", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                }
                 PathField(
                     title: "Key file", placeholder: "none", path: $model.config.keyfile,
                     chooseDirectories: false)
-                SecureField("Key password", text: $encryptionPassword)
-                    .onChange(of: encryptionPassword) { save(encryptionPassword, .encryptionPassword) }
-                Text("Create a key with `proxmox-backup-client key create`. Keep a copy of it somewhere else: without the key, encrypted backups cannot be restored.")
+                if keyInfo?.passwordProtected ?? false {
+                    SecureField("Key password", text: $encryptionPassword)
+                        .onChange(of: encryptionPassword) { save(encryptionPassword, .encryptionPassword) }
+                }
+                Text("Without the key, encrypted backups cannot be restored. Keep a printed paper key or a copy of the key file outside this Mac.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
@@ -133,6 +153,12 @@ private struct ServerSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $showCreateKey) {
+            CreateKeySheet().environment(model)
+        }
+        .sheet(isPresented: $showPaperKey) {
+            PaperKeyView(keyPath: model.config.keyfile, isNewKey: false).environment(model)
+        }
     }
 
     private func save(_ value: String, _ account: Keychain.Account) {

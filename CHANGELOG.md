@@ -20,6 +20,10 @@ The release workflow takes the release notes from the section of the version in
   (extended attributes and file flags are not restored).
 - While a backup runs, the menu bar icon turns and the menu shows the elapsed
   time and how much was read and uploaded.
+- Encryption key creation in Settings → Server, as in Proxmox VE: the key is
+  created without a password, and the paper key (key as text and QR code) can
+  be printed and the key file saved elsewhere. A new key has to be confirmed
+  as stored safely. An existing key is moved aside, never overwritten.
 - Password and encryption key password are stored in the Keychain.
 - Failed backups are retried after 15 minutes, then 30, 60, … up to 4 hours.
 - Quitting the app stops a running backup, and a client left behind by a

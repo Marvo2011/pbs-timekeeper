@@ -32,7 +32,9 @@ or Apple Inc.
   the mounted snapshot, which reads only the selected files from the server.
   Permissions and dates are kept, extended attributes and file flags are not
   (FUSE-T does not show them), use `proxmox-backup-client restore` for those.
-- Optional client-side **encryption** with a key file.
+- Optional client-side **encryption**: create a key in the settings and print
+  its paper key (text and QR code), or use an existing key file. Keep a copy of
+  the key outside the Mac: without it, encrypted backups cannot be restored.
 - Passwords are stored in the **Keychain**.
 
 ## Requirements
@@ -81,6 +83,7 @@ the PBS web interface.
 | State of the last backup | `~/Library/Application Support/PBSTimekeeper/state.json` |
 | Logs of backups and restores | `~/Library/Logs/PBSTimekeeper/` |
 | Mount points of the browser | `~/Library/Caches/PBSTimekeeper/Mounts/` |
+| Encryption key created by the app | `~/Library/Application Support/PBSTimekeeper/encryption-key.json` |
 | Passwords | Keychain, service `io.github.marvo2011.pbs-timekeeper` |
 
 ## Building
