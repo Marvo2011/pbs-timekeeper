@@ -29,11 +29,21 @@ struct PBSTimekeeperApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var termSource: DispatchSourceSignal?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Notifier.requestAuthorization()
+        // quit cleanly on SIGTERM (kill, logout scripts), so the backup is stopped as well
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        source.setEventHandler { NSApp.terminate(nil) }
+        source.resume()
+        termSource = source
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // a running backup would otherwise go on without the app and keep the group locked
+        RunningClient.stopLeftover()
         Mounts.unmountAll()
     }
 }

@@ -166,6 +166,9 @@ import Testing
         state.lastAttempt = now.addingTimeInterval(-5 * 60)
         state.lastError = "offline"
         #expect(Schedule.nextBackup(state: state, intervalMinutes: 60, now: now) == now.addingTimeInterval(10 * 60))
+        state.failures = 3
+        #expect(Schedule.nextBackup(state: state, intervalMinutes: 60, now: now) == now.addingTimeInterval(55 * 60))
+        #expect(Schedule.retryDelay(failures: 20) == Schedule.maxRetryDelay)
     }
 }
 
@@ -240,5 +243,33 @@ final class LineSink: @unchecked Sendable {
         #expect(SkippedEntries.isSkipped(#"failed to open file: ".pxarexclude": access denied"#))
         #expect(SkippedEntries.isSkipped(#"warning: failed to stat file: "Library/Mail": operation not permitted"#))
         #expect(!SkippedEntries.isSkipped("processed 11.427 GiB in 1m, uploaded 10.124 GiB"))
+    }
+}
+
+@Suite struct RunningClientTests {
+    @Test func recognizesClientProcesses() throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "tk-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let fake = dir.appending(path: ClientLocator.executableName)
+        try FileManager.default.copyItem(at: URL(fileURLWithPath: "/bin/sleep"), to: fake)
+
+        let client = Process()
+        client.executableURL = fake
+        client.arguments = ["30"]
+        try client.run()
+        let other = Process()
+        other.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        other.arguments = ["30"]
+        try other.run()
+        defer {
+            client.terminate()
+            other.terminate()
+        }
+        #expect(RunningClient.isClient(client.processIdentifier))
+        #expect(!RunningClient.isClient(other.processIdentifier))
+        client.interrupt()
+        client.waitUntilExit()
+        #expect(!RunningClient.isClient(client.processIdentifier))
     }
 }

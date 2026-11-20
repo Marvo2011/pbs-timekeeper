@@ -40,6 +40,7 @@ public struct ClientError: Error, LocalizedError, Sendable {
 public enum ClientRunner {
     public static func run(
         executable: URL, invocation: ClientInvocation, logFile: URL? = nil,
+        onStart: (@Sendable (Int32) -> Void)? = nil,
         onLine: (@Sendable (String) -> Void)? = nil
     ) async throws -> ProcessResult {
         let process = Process()
@@ -75,6 +76,7 @@ public enum ClientRunner {
                 }
                 do {
                     try process.run()
+                    onStart?(process.processIdentifier)
                 } catch {
                     stdout.fileHandleForReading.readabilityHandler = nil
                     stderr.fileHandleForReading.readabilityHandler = nil
@@ -92,10 +94,12 @@ public enum ClientRunner {
     @discardableResult
     public static func check(
         executable: URL, invocation: ClientInvocation, logFile: URL? = nil,
+        onStart: (@Sendable (Int32) -> Void)? = nil,
         onLine: (@Sendable (String) -> Void)? = nil
     ) async throws -> ProcessResult {
         let result = try await run(
-            executable: executable, invocation: invocation, logFile: logFile, onLine: onLine)
+            executable: executable, invocation: invocation, logFile: logFile, onStart: onStart,
+            onLine: onLine)
         guard result.succeeded else {
             throw ClientError(result.errorMessage)
         }

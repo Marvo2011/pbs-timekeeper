@@ -17,6 +17,10 @@ The release workflow takes the release notes from the section of the version in
   with FUSE-T, keeps the folder shown while moving through time, and restores
   files and folders to their original place or a chosen folder.
 - Password and encryption key password are stored in the Keychain.
+- Failed backups are retried after 15 minutes, then 30, 60, … up to 4 hours.
+- Quitting the app stops a running backup, and a client left behind by a
+  killed app is stopped at the next launch. Before, it kept the backup group
+  locked on the server (`unable to acquire backup group lock`).
 - Shows in the menu and settings whether the app has Full Disk Access, and how
   many items a backup skipped because macOS denied access.
 - Bundles proxmox-backup-client 4.2.10+20261120 of the macOS port.

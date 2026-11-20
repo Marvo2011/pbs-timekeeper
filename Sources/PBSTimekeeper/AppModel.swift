@@ -44,6 +44,7 @@ final class AppModel {
         config = JSONStore<AppConfig>(url: Paths.config).load() ?? AppConfig()
         state = JSONStore<BackupState>(url: Paths.state).load() ?? BackupState()
         Mounts.unmountAll()
+        RunningClient.stopLeftover()
         startScheduler()
     }
 
@@ -177,8 +178,10 @@ final class AppModel {
 
             let builder = self.builder
             let skipped = Counter()
+            defer { RunningClient.clear() }
             try await ClientRunner.check(
-                executable: client, invocation: builder.backup(folders: folders), logFile: logFile
+                executable: client, invocation: builder.backup(folders: folders), logFile: logFile,
+                onStart: RunningClient.record
             ) { line in
                 if SkippedEntries.isSkipped(line) {
                     skipped.increment()
@@ -205,8 +208,10 @@ final class AppModel {
             state.lastSuccess = started
             state.lastAttempt = started
             state.lastError = nil
+            state.failures = nil
         } catch {
             state.lastAttempt = started
+            state.failures = (state.failures ?? 0) + 1
             state.lastError = Task.isCancelled ? "The backup was stopped." : Self.describe(error)
             if !Task.isCancelled {
                 Notifier.post(title: "Backup failed", body: state.lastError ?? "")

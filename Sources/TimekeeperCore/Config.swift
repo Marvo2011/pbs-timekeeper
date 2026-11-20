@@ -138,6 +138,8 @@ public struct BackupState: Codable, Equatable, Sendable {
     /// Problems that did not fail the backup, e.g. a missing folder or a failed prune.
     public var lastWarning: String?
     public var lastLog: String?
+    /// Failed attempts since the last successful backup, for the retry backoff.
+    public var failures: Int?
 
     public init() {}
 }
