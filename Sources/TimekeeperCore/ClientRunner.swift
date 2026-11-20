@@ -22,6 +22,15 @@ public enum SkippedEntries {
     public static func isSkipped(_ line: String) -> Bool {
         (line.contains("failed to open file:") || line.contains("failed to stat file:"))
             && (line.contains("access denied") || line.contains("operation not permitted"))
+            // the client looks for this optional exclude list in every folder, it is not an
+            // entry of the backup
+            && !line.contains(".pxarexclude\"")
+    }
+
+    /// Warnings about single entries, which should not show up as the backup's status.
+    public static func isWarning(_ line: String) -> Bool {
+        line.hasPrefix("warning:") || line.hasPrefix("failed to ") || line.hasPrefix("skipping ")
+            || line.contains("ignoring .pxarexclude")
     }
 }
 

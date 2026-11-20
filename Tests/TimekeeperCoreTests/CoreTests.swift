@@ -254,7 +254,10 @@ final class LineSink: @unchecked Sendable {
 @Suite struct SkippedEntriesTests {
     @Test func recognizesDeniedEntries() {
         #expect(SkippedEntries.isSkipped(#"failed to open file: "Accounts": operation not permitted (privacy protected, needs Full Disk Access)"#))
-        #expect(SkippedEntries.isSkipped(#"failed to open file: ".pxarexclude": access denied"#))
+        #expect(!SkippedEntries.isSkipped(#"failed to open file: "Library/x/.pxarexclude": access denied"#))
+        #expect(SkippedEntries.isSkipped(#"failed to open file: "Library/x/a": access denied"#))
+        #expect(SkippedEntries.isWarning(#"skipping online-only file: "a""#))
+        #expect(!SkippedEntries.isWarning("processed 1 GiB in 1m, uploaded 1 GiB"))
         #expect(SkippedEntries.isSkipped(#"warning: failed to stat file: "Library/Mail": operation not permitted"#))
         #expect(!SkippedEntries.isSkipped("processed 11.427 GiB in 1m, uploaded 10.124 GiB"))
     }

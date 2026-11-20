@@ -211,6 +211,9 @@ final class AppModel {
                 if SkippedEntries.isSkipped(line) {
                     skipped.increment()
                 }
+                if SkippedEntries.isWarning(line) {
+                    return
+                }
                 Task { @MainActor [weak self] in
                     self?.progressLine = line
                     if let progress = BackupProgress(line: line) {
