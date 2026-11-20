@@ -12,7 +12,7 @@ struct PBSTimekeeperApp: App {
             MenuContent()
                 .environment(model)
         } label: {
-            Image(systemName: model.menuBarSymbol)
+            Image(nsImage: model.menuBarImage)
         }
 
         Window("Browse Backups", id: BrowserView.windowID) {

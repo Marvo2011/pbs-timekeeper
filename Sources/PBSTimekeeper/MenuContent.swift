@@ -8,8 +8,10 @@ struct MenuContent: View {
 
     var body: some View {
         if model.isBackingUp {
-            Text("Backing up…")
-            if !model.progressLine.isEmpty {
+            Text("Backing up… \(model.elapsedText())")
+            if let progress = model.progress {
+                Text("\(progress.processed) read · \(progress.uploaded) uploaded")
+            } else if !model.progressLine.isEmpty {
                 Text(model.progressLine.prefix(60))
             }
         } else {

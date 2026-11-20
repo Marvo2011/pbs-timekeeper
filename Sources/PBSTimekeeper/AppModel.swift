@@ -26,6 +26,9 @@ final class AppModel {
     private(set) var isBackingUp = false
     private(set) var backupStarted: Date?
     private(set) var progressLine = ""
+    private(set) var progress: BackupProgress?
+    private var spinnerFrame = 0
+    private var spinnerTask: Task<Void, Never>?
     var configError: String?
     /// Bumped after every backup, so an open browser reloads its snapshots.
     private(set) var backupGeneration = 0
@@ -82,14 +85,31 @@ final class AppModel {
         return (state.lastAttempt ?? .distantPast) > (state.lastSuccess ?? .distantPast)
     }
 
-    var menuBarSymbol: String {
+    var menuBarImage: NSImage {
         if isBackingUp {
-            return "arrow.triangle.2.circlepath"
+            return MenuBarIcon.spinner[spinnerFrame % MenuBarIcon.spinner.count]
         }
         if lastFailed || setupProblem != nil {
-            return "exclamationmark.arrow.circlepath"
+            return MenuBarIcon.symbol("exclamationmark.arrow.circlepath")
         }
-        return "clock.arrow.circlepath"
+        return MenuBarIcon.symbol("clock.arrow.circlepath")
+    }
+
+    /// "Backing up… 12 min" for the menu.
+    func elapsedText(now: Date = Date()) -> String {
+        guard let started = backupStarted else { return "" }
+        let minutes = Int(now.timeIntervalSince(started) / 60)
+        return minutes < 1 ? "less than a minute" : minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h \(minutes % 60) min"
+    }
+
+    private func animateSpinner() {
+        spinnerTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: MenuBarIcon.frameInterval)
+                guard let self, self.isBackingUp else { return }
+                self.spinnerFrame += 1
+            }
+        }
     }
 
     // MARK: Scheduler
@@ -131,6 +151,8 @@ final class AppModel {
         isBackingUp = true
         backupStarted = Date()
         progressLine = "Preparing…"
+        progress = nil
+        animateSpinner()
         backupTask = Task { [weak self] in
             await self?.runBackup()
         }
@@ -152,6 +174,9 @@ final class AppModel {
             isBackingUp = false
             backupStarted = nil
             progressLine = ""
+            progress = nil
+            spinnerTask?.cancel()
+            spinnerTask = nil
             backupTask = nil
             backupGeneration += 1
         }
@@ -188,6 +213,9 @@ final class AppModel {
                 }
                 Task { @MainActor [weak self] in
                     self?.progressLine = line
+                    if let progress = BackupProgress(line: line) {
+                        self?.progress = progress
+                    }
                 }
             }
             let skippedCount = skipped.value
