@@ -76,8 +76,10 @@ final class BrowserModel {
                 logFile: Logs.newLogFile(prefix: "browse"))
             Logs.prune(prefix: "browse", keep: 20)
             let list = try Snapshot.parseList(Data(result.stdout.utf8))
+            // whoever looked at the newest backup gets the one just finished
+            let showedNewest = selectedID != nil && selectedID == snapshots.first?.id
             snapshots = list
-            if selectedID == nil || !list.contains(where: { $0.id == selectedID }) {
+            if showedNewest || selectedID == nil || !list.contains(where: { $0.id == selectedID }) {
                 selectedID = list.first?.id
             }
             if list.isEmpty {

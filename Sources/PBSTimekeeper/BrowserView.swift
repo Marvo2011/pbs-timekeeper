@@ -230,6 +230,11 @@ private struct TimelineBar: View {
             .padding(10)
             Divider()
             List(selection: $browser.selectedID) {
+                if browser.app.isBackingUp {
+                    Section("Now") {
+                        RunningBackupRow(app: browser.app)
+                    }
+                }
                 ForEach(days, id: \.day) { group in
                     Section(Format.day(group.day)) {
                         ForEach(group.snapshots) { snapshot in
@@ -269,6 +274,50 @@ private struct TimelineBar: View {
             }
         }
         return result
+    }
+}
+
+/// The backup in progress, on top of the timeline. It has no tag, so it cannot be selected:
+/// there is nothing to browse before the snapshot is finished.
+private struct RunningBackupRow: View {
+    let app: AppModel
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    Text("Backing up… \(app.elapsedText(now: context.date))")
+                        .fontWeight(.medium)
+                }
+                if let folder = app.currentFolder {
+                    Text(FileManager.default.displayName(atPath: folder))
+                        .foregroundStyle(.secondary)
+                }
+                Group {
+                    if let progress = app.progress {
+                        Text("\(progress.processed) read · \(progress.uploaded) uploaded")
+                    } else if !app.progressLine.isEmpty {
+                        Text(app.progressLine)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            }
+            .lineLimit(1)
+            .truncationMode(.middle)
+            Spacer(minLength: 0)
+            Button { app.stopBackup() } label: {
+                Image(systemName: "stop.circle")
+            }
+            .buttonStyle(.borderless)
+            .help("Stop Backup")
+        }
+        .padding(.vertical, 2)
+        .help("The backup appears on the timeline when it is finished.")
     }
 }
 

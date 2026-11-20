@@ -27,6 +27,8 @@ final class AppModel {
     private(set) var backupStarted: Date?
     private(set) var progressLine = ""
     private(set) var progress: BackupProgress?
+    /// The folder the running backup is reading.
+    private(set) var currentFolder: String?
     private var spinnerFrame = 0
     private var spinnerTask: Task<Void, Never>?
     var configError: String?
@@ -183,6 +185,7 @@ final class AppModel {
         backupStarted = Date()
         progressLine = "Preparing…"
         progress = nil
+        currentFolder = nil
         animateSpinner()
         backupTask = Task { [weak self] in
             await self?.runBackup()
@@ -206,6 +209,7 @@ final class AppModel {
             backupStarted = nil
             progressLine = ""
             progress = nil
+            currentFolder = nil
             spinnerTask?.cancel()
             spinnerTask = nil
             backupTask = nil
@@ -249,6 +253,8 @@ final class AppModel {
                     self?.progressLine = line
                     if let progress = BackupProgress(line: line) {
                         self?.progress = progress
+                    } else if let folder = BackupProgress.folder(line: line) {
+                        self?.currentFolder = folder
                     }
                 }
             }

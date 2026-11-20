@@ -20,6 +20,13 @@ public struct BackupProgress: Equatable, Sendable {
         self.uploaded = uploaded
     }
 
+    /// The folder the client starts uploading, from
+    /// `Upload directory '/Users/me' to 'root@pam@host:8007:store' as me.pxar.didx`.
+    public static func folder(line: String) -> String? {
+        guard let match = line.firstMatch(of: #/^Upload directory '(.*)' to '.*' as /#) else { return nil }
+        return String(match.1)
+    }
+
     /// `182.652 GiB` → `182.7 GiB`
     static func shorten(_ amount: String) -> String {
         let parts = amount.split(separator: " ")

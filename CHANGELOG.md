@@ -21,7 +21,9 @@ The release workflow takes the release notes from the section of the version in
   copies from the mount, so only the selected files are read from the server
   (extended attributes and file flags are not restored).
 - While a backup runs, the menu bar icon turns and the menu shows the elapsed
-  time and how much was read and uploaded.
+  time and how much was read and uploaded. The browser shows it as "Now" on top
+  of the timeline, with the folder being read and a stop button, and moves to
+  the new snapshot when it is finished.
 - Encryption key creation in Settings → Server, as in Proxmox VE: the key is
   created without a password, and the paper key (key as text and QR code) can
   be printed and the key file saved elsewhere. A new key has to be confirmed

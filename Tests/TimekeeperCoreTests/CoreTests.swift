@@ -312,6 +312,11 @@ final class LineSink: @unchecked Sendable {
         #expect(progress?.uploaded.hasSuffix(" GiB") == true)
         #expect(BackupProgress(line: "processed 11 MiB in 1m, uploaded 0 B") == BackupProgress(processed: "11 MiB", uploaded: "0 B"))
         #expect(BackupProgress(line: "skipping online-only file: \"x\"") == nil)
+        #expect(
+            BackupProgress.folder(
+                line: "Upload directory '/Users/me/My 'Docs'' to 'root@pam@10.0.0.1:8007:store' as docs.mpxar.didx")
+                == "/Users/me/My 'Docs'")
+        #expect(BackupProgress.folder(line: "processed 1 GiB in 1m, uploaded 0 B") == nil)
     }
 }
 
