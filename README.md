@@ -22,9 +22,10 @@ or Apple Inc.
   changed files are read (metadata change detection) and only new data is
   uploaded (deduplication). The legacy mode, which reads all files on every
   backup and stores one `.pxar` per folder, is available in the settings.
-- **Retention like you know it**: hourly snapshots for a day, daily ones for a
-  month, weekly ones for a year (configurable). Older snapshots are pruned after
-  each backup, the space is freed by the garbage collection on the server.
+- **Retention**: by default the app never removes backups, set up a prune job
+  on the server for that. Optionally the app prunes after each backup: hourly
+  snapshots for a day, daily ones for a month, weekly ones for a year
+  (configurable). The space is freed by the garbage collection on the server.
 - **Timeline browser**: all snapshots by date on the right, the files of the
   selected one on the left. The folder shown stays the same while you step
   through time (⌘↑ / ⌘↓), so finding the version before an accident is quick.
@@ -45,10 +46,10 @@ or Apple Inc.
 ## Requirements
 
 - macOS 14 or newer on Apple Silicon.
-- A Proxmox Backup Server and a user or API token with the `DatastorePowerUser`
-  role on the datastore (or namespace): it can back up and prune its own
-  backups. With `DatastoreBackup` only, set all retention values to 0 and prune
-  on the server instead.
+- A Proxmox Backup Server and a user or API token with the `DatastoreBackup`
+  role on the datastore (or namespace). Pruning by the app (Settings →
+  Retention, off by default) and removing single backups need
+  `DatastorePowerUser`.
 - [FUSE-T](https://www.fuse-t.org) for browsing backups
   (`brew install --cask macos-fuse-t/cask/fuse-t`). Backing up works without it.
 

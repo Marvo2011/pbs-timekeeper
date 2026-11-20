@@ -109,12 +109,15 @@ import Testing
 
     @Test func prune() {
         var config = config
+        #expect(builder(config).prune() == nil)  // off by default
         config.retention = Retention()
+        config.retention.enabled = true
         config.retention.weekly = 0
         let args = builder(config).prune()?.arguments ?? []
         #expect(args.starts(with: ["prune", "host/mac", "--keep-hourly", "24", "--keep-daily", "30", "--server"]))
         #expect(!args.contains("--keep-weekly"))
         config.retention = Retention()
+        config.retention.enabled = true
         config.retention.hourly = 0
         config.retention.daily = 0
         config.retention.weekly = 0
@@ -187,6 +190,18 @@ import Testing
         #expect(future.changeDetection == .metadata)
         let legacy = try JSONDecoder().decode(AppConfig.self, from: Data(#"{"changeDetection":"legacy"}"#.utf8))
         #expect(legacy.changeDetection == .legacy)
+        #expect(!config.retention.enabled)
+    }
+
+    @Test func decodesRetention() throws {
+        let old = try JSONDecoder().decode(AppConfig.self, from: Data(#"{"retention":{"hourly":90}}"#.utf8))
+        #expect(!old.retention.enabled)
+        #expect(old.retention.hourly == 90)
+        #expect(old.retention.daily == 30)
+        var retention = Retention()
+        retention.enabled = true
+        let decoded = try JSONDecoder().decode(Retention.self, from: JSONEncoder().encode(retention))
+        #expect(decoded == retention)
     }
 }
 

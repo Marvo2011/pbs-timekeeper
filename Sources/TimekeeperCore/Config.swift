@@ -43,7 +43,10 @@ public struct BackupFolder: Codable, Equatable, Identifiable, Sendable {
 
 /// How many snapshots `prune` keeps per period, 0 disables a period. The defaults follow
 /// the common scheme: hourly for a day, daily for a month, weekly for a year.
+/// Pruning by the app after each backup. Off by default: retention is usually set up on the
+/// server (prune jobs), which also works with the `DatastoreBackup` role.
 public struct Retention: Codable, Equatable, Sendable {
+    public var enabled = false
     public var hourly = 24
     public var daily = 30
     public var weekly = 52
@@ -52,10 +55,25 @@ public struct Retention: Codable, Equatable, Sendable {
 
     public init() {}
 
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Retention()
+        // configs written before the switch existed get the default (off)
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? defaults.enabled
+        hourly = try c.decodeIfPresent(Int.self, forKey: .hourly) ?? defaults.hourly
+        daily = try c.decodeIfPresent(Int.self, forKey: .daily) ?? defaults.daily
+        weekly = try c.decodeIfPresent(Int.self, forKey: .weekly) ?? defaults.weekly
+        monthly = try c.decodeIfPresent(Int.self, forKey: .monthly) ?? defaults.monthly
+        yearly = try c.decodeIfPresent(Int.self, forKey: .yearly) ?? defaults.yearly
+    }
+
     /// Without any keep option there is nothing to prune (and the server would refuse).
     public var isEmpty: Bool {
         hourly <= 0 && daily <= 0 && weekly <= 0 && monthly <= 0 && yearly <= 0
     }
+
+    /// Whether the app prunes after each backup.
+    public var isActive: Bool { enabled && !isEmpty }
 }
 
 /// How the client finds out what changed since the previous backup.

@@ -287,19 +287,32 @@ private struct RetentionSettings: View {
         @Bindable var model = model
         Form {
             Section {
+                Toggle("Remove old backups after each backup", isOn: $model.config.retention.enabled)
+            } footer: {
+                Text(
+                    model.config.retention.enabled
+                        ? "PBS Timekeeper prunes the backups of this Mac on the server after each backup. Your server user needs the DatastorePowerUser role (Datastore.Prune) for this."
+                        : "Off: PBS Timekeeper never removes backups by itself. Set up a prune job for the datastore or namespace on the Proxmox Backup Server (Datastore → Prune & GC), otherwise all backups are kept and the datastore keeps growing."
+                )
+                .font(.caption).foregroundStyle(.secondary)
+            }
+            Section {
                 KeepStepper(label: "Hourly backups", value: $model.config.retention.hourly)
                 KeepStepper(label: "Daily backups", value: $model.config.retention.daily)
                 KeepStepper(label: "Weekly backups", value: $model.config.retention.weekly)
                 KeepStepper(label: "Monthly backups", value: $model.config.retention.monthly)
                 KeepStepper(label: "Yearly backups", value: $model.config.retention.yearly)
+            } header: {
+                Text("Keep")
             } footer: {
                 Text(
                     model.config.retention.isEmpty
-                        ? "All snapshots are kept. Old ones can also be pruned on the server."
-                        : "After each backup, older snapshots of this Mac are removed so that only these are kept. 0 means none of that period. The space is freed by garbage collection on the server."
+                        ? "Nothing is pruned while all values are 0."
+                        : "Older snapshots are removed so that only these are kept. 0 means none of that period. The space is freed by garbage collection on the server."
                 )
                 .font(.caption).foregroundStyle(.secondary)
             }
+            .disabled(!model.config.retention.enabled)
         }
         .formStyle(.grouped)
     }

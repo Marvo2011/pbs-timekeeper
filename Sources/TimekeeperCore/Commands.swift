@@ -99,10 +99,10 @@ public struct CommandBuilder: Sendable {
         return invocation(args)
     }
 
-    /// Thins out the snapshots of this Mac, nil if no retention is configured.
+    /// Thins out the snapshots of this Mac, nil if client-side retention is off.
     public func prune() -> ClientInvocation? {
         let r = config.retention
-        if r.isEmpty {
+        if !r.isActive {
             return nil
         }
         var args = ["prune", group]
