@@ -15,6 +15,7 @@ swift build
 swift test                      # swift-testing, TimekeeperCore only
 ./scripts/build-app.sh          # app bundle + zip in build/, downloads the client release
 PBS_CLIENT=../proxmox-backup-client-mac/target/release/proxmox-backup-client ./scripts/build-app.sh
+swift scripts/make-icon.swift   # redraws Resources/AppIcon.icns (+ .png preview), both are committed
 ```
 
 ## Layout

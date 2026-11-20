@@ -34,6 +34,7 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/PBSTimekeeper"
 cp "$client" "$app/Contents/MacOS/proxmox-backup-client"
+cp Resources/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 sed -e "s/@VERSION@/${version}/g" -e "s/@CLIENT_VERSION@/${client_version}/g" \
     Resources/Info.plist > "$app/Contents/Info.plist"
 plutil -lint "$app/Contents/Info.plist" > /dev/null

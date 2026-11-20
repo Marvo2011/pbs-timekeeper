@@ -40,4 +40,6 @@ The release workflow takes the release notes from the section of the version in
   locked on the server (`unable to acquire backup group lock`).
 - Shows in the menu and settings whether the app has Full Disk Access, and how
   many items a backup skipped because macOS denied access.
+- App icon: a clock with an arrow turning back in time, in Proxmox orange on
+  charcoal.
 - Bundles proxmox-backup-client 4.2.10+20261120 of the macOS port.
