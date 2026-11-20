@@ -16,6 +16,15 @@ public struct ProcessResult: Sendable {
     }
 }
 
+/// Entries the client skipped because macOS denied access, reported in its output as
+/// `failed to open file: …: access denied` / `operation not permitted`.
+public enum SkippedEntries {
+    public static func isSkipped(_ line: String) -> Bool {
+        (line.contains("failed to open file:") || line.contains("failed to stat file:"))
+            && (line.contains("access denied") || line.contains("operation not permitted"))
+    }
+}
+
 public struct ClientError: Error, LocalizedError, Sendable {
     public var message: String
 

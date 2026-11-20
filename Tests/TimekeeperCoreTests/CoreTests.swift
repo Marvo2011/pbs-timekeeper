@@ -233,3 +233,12 @@ final class LineSink: @unchecked Sendable {
         lock.withLock { lines }
     }
 }
+
+@Suite struct SkippedEntriesTests {
+    @Test func recognizesDeniedEntries() {
+        #expect(SkippedEntries.isSkipped(#"failed to open file: "Accounts": operation not permitted (privacy protected, needs Full Disk Access)"#))
+        #expect(SkippedEntries.isSkipped(#"failed to open file: ".pxarexclude": access denied"#))
+        #expect(SkippedEntries.isSkipped(#"warning: failed to stat file: "Library/Mail": operation not permitted"#))
+        #expect(!SkippedEntries.isSkipped("processed 11.427 GiB in 1m, uploaded 10.124 GiB"))
+    }
+}

@@ -29,6 +29,12 @@ final class AppModel {
     var configError: String?
     /// Bumped after every backup, so an open browser reloads its snapshots.
     private(set) var backupGeneration = 0
+    /// Checked at start and whenever the menu or settings open, it can change at any time.
+    private(set) var hasFullDiskAccess = Paths.hasFullDiskAccess
+
+    func refreshPermissions() {
+        hasFullDiskAccess = Paths.hasFullDiskAccess
+    }
 
     private var backupTask: Task<Void, Never>?
     private var schedulerTask: Task<Void, Never>?
@@ -92,6 +98,7 @@ final class AppModel {
             // let the menu bar settle and the network come up after login
             try? await Task.sleep(for: .seconds(30))
             while !Task.isCancelled {
+                self?.refreshPermissions()
                 self?.backupIfDue()
                 try? await Task.sleep(for: .seconds(60))
             }
@@ -169,12 +176,22 @@ final class AppModel {
             }
 
             let builder = self.builder
+            let skipped = Counter()
             try await ClientRunner.check(
                 executable: client, invocation: builder.backup(folders: folders), logFile: logFile
             ) { line in
+                if SkippedEntries.isSkipped(line) {
+                    skipped.increment()
+                }
                 Task { @MainActor [weak self] in
                     self?.progressLine = line
                 }
+            }
+            let skippedCount = skipped.value
+            if skippedCount > 0 {
+                warnings.append(
+                    "\(skippedCount) item\(skippedCount == 1 ? " was" : "s were") skipped because macOS denied access"
+                        + (hasFullDiskAccess ? ", see the log." : ". Grant PBS Timekeeper Full Disk Access to include them."))
             }
 
             if let prune = builder.prune() {
@@ -240,6 +257,19 @@ final class AppModel {
                 configError = "Login item: \(error.localizedDescription)"
             }
         }
+    }
+}
+
+final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    func increment() {
+        lock.withLock { count += 1 }
+    }
+
+    var value: Int {
+        lock.withLock { count }
     }
 }
 

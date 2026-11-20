@@ -17,4 +17,6 @@ The release workflow takes the release notes from the section of the version in
   with FUSE-T, keeps the folder shown while moving through time, and restores
   files and folders to their original place or a chosen folder.
 - Password and encryption key password are stored in the Keychain.
-- Bundles proxmox-backup-client 4.2.10+20261119 of the macOS port.
+- Shows in the menu and settings whether the app has Full Disk Access, and how
+  many items a backup skipped because macOS denied access.
+- Bundles proxmox-backup-client 4.2.10+20261120 of the macOS port.

@@ -27,6 +27,15 @@ public enum Paths {
         home.appending(path: "Library/Logs/PBSTimekeeper", directoryHint: .isDirectory)
     }
 
+    /// Whether the app (and so the client it starts) has Full Disk Access: the TCC database
+    /// can only be read with it.
+    public static var hasFullDiskAccess: Bool {
+        let tccDB = home.appending(path: "Library/Application Support/com.apple.TCC/TCC.db")
+        guard let handle = try? FileHandle(forReadingFrom: tccDB) else { return false }
+        try? handle.close()
+        return true
+    }
+
     /// FUSE-T provides the libfuse3 the client loads for `mount`.
     public static var fuseInstalled: Bool {
         FileManager.default.fileExists(atPath: "/usr/local/lib/libfuse3.4.dylib")

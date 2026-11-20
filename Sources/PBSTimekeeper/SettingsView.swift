@@ -18,7 +18,13 @@ struct SettingsView: View {
                 .tabItem { Label("Retention", systemImage: "calendar") }
         }
         .frame(width: 560, height: 460)
-        .onAppear { NSApplication.bringToFront() }
+        .onAppear {
+            NSApplication.bringToFront()
+            model.refreshPermissions()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            model.refreshPermissions()
+        }
         .alert(
             "Settings", isPresented: Binding(
                 get: { model.configError != nil }, set: { if !$0 { model.configError = nil } })
@@ -53,12 +59,16 @@ private struct GeneralSettings: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Privacy") {
-                Text("To back up Desktop, Documents, Downloads or folders of other apps, PBS Timekeeper needs Full Disk Access.")
-                    .font(.callout)
-                Button("Open Full Disk Access Settings") {
-                    NSWorkspace.shared.open(
-                        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
+                if model.hasFullDiskAccess {
+                    Label("PBS Timekeeper has Full Disk Access.", systemImage: "checkmark.shield")
+                        .foregroundStyle(.green)
+                } else {
+                    Label("No Full Disk Access", systemImage: "exclamationmark.shield")
+                        .foregroundStyle(.orange)
+                    Text("Without it, macOS hides protected folders (Desktop, Documents, Downloads, Mail, Messages, ~/Library/Accounts, …) and they are skipped. Add PBS Timekeeper in System Settings, the status here updates when you come back.")
+                        .font(.callout)
                 }
+                Button("Open Full Disk Access Settings") { FullDiskAccess.openSettings() }
             }
             Section("proxmox-backup-client") {
                 PathField(

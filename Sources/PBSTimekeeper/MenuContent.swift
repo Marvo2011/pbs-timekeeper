@@ -22,6 +22,13 @@ struct MenuContent: View {
             Text("⚠︎ \(problem)")
         } else if model.lastFailed, let error = model.state.lastError {
             Text("⚠︎ Last backup failed: \(error.prefix(80))")
+        } else if let warning = model.state.lastWarning {
+            Text("⚠︎ \(warning.prefix(100))")
+        }
+        if !model.hasFullDiskAccess {
+            Button("⚠︎ No Full Disk Access – protected folders are skipped…") {
+                FullDiskAccess.openSettings()
+            }
         }
 
         Divider()
@@ -51,6 +58,13 @@ struct MenuContent: View {
         .keyboardShortcut(",")
         Button("Quit PBS Timekeeper") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
+    }
+}
+
+enum FullDiskAccess {
+    static func openSettings() {
+        NSWorkspace.shared.open(
+            URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
     }
 }
 
