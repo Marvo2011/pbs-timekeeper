@@ -55,7 +55,16 @@ or Apple Inc.
 
 ## Installation
 
-Download the zip of the latest
+With [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask marvo2011/tap/pbs-timekeeper
+```
+
+Homebrew removes the quarantine attribute of the app, as it is not notarized.
+`brew upgrade` updates it.
+
+Or download the zip of the latest
 [release](https://github.com/Marvo2011/pbs-timekeeper/releases), unpack it and
 move `PBS Timekeeper.app` to `/Applications`. The app is not notarized, remove
 the quarantine attribute before the first start:

@@ -18,6 +18,12 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  # Homebrew tap (<owner>/homebrew-tap) that gets the cask of each release. Needs the
+  # HOMEBREW_TAP_TOKEN secret with write access to it, the step is skipped without.
+  HOMEBREW_TAP: ${{ github.repository_owner }}/homebrew-tap
+  HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
 jobs:
   build:
     name: Build and release (macOS arm64)
@@ -97,3 +103,78 @@ jobs:
               --title "PBS Timekeeper ${VERSION}" \
               --notes-file notes.md
           fi
+
+      - name: Update Homebrew tap
+        if: >
+          github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+          && env.HOMEBREW_TAP_TOKEN != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          zip="build/PBS-Timekeeper-${VERSION}-macos-arm64.zip"
+          sha256=$(shasum -a 256 "$zip" | cut -d' ' -f1)
+
+          git clone --depth 1 \
+            "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${HOMEBREW_TAP}.git" tap
+          mkdir -p tap/Casks
+
+          # placeholders are replaced below, the heredoc is quoted so that the Ruby code is
+          # taken literally. The app is not notarized, so the quarantine attribute that
+          # Homebrew puts on the unpacked app is removed before it is moved into place,
+          # otherwise Gatekeeper refuses to open it.
+          cat > tap/Casks/pbs-timekeeper.rb <<'EOF'
+          cask "pbs-timekeeper" do
+            version "@VERSION@"
+            sha256 "@SHA256@"
+
+            url "https://github.com/@REPOSITORY@/releases/download/v#{version}/PBS-Timekeeper-#{version}-macos-arm64.zip"
+            name "PBS Timekeeper"
+            desc "Folder backups to a Proxmox Backup Server, with a timeline to restore"
+            homepage "https://github.com/@REPOSITORY@"
+
+            depends_on arch: :arm64
+            depends_on macos: :sonoma
+
+            app "PBS Timekeeper.app"
+
+            preflight_steps do
+              run "/usr/bin/xattr",
+                  args:           ["-dr", "com.apple.quarantine", "PBS Timekeeper.app"],
+                  chdir:          ".",
+                  writable_paths: ["PBS Timekeeper.app"]
+            end
+
+            uninstall quit: "io.github.marvo2011.pbs-timekeeper"
+
+            zap trash: [
+              "~/Library/Application Support/PBSTimekeeper",
+              "~/Library/Caches/PBSTimekeeper",
+              "~/Library/Logs/PBSTimekeeper",
+            ]
+
+            caveats <<~EOS
+              Browsing backups needs FUSE-T:
+                brew install --cask macos-fuse-t/cask/fuse-t
+
+              To back up protected folders (Desktop, Documents, Mail, ...), give
+              PBS Timekeeper Full Disk Access in System Settings > Privacy & Security.
+            EOS
+          end
+          EOF
+          sed -i '' \
+            -e "s|@REPOSITORY@|${GITHUB_REPOSITORY}|g" \
+            -e "s|@VERSION@|${VERSION}|" \
+            -e "s|@SHA256@|${sha256}|" \
+            tap/Casks/pbs-timekeeper.rb
+
+          cd tap
+          git add Casks/pbs-timekeeper.rb
+          if git diff --cached --quiet; then
+            echo "cask is up to date"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "pbs-timekeeper ${VERSION}"
+          git push

@@ -42,7 +42,7 @@ swift scripts/make-icon.swift   # redraws Resources/AppIcon.icns (+ .png preview
 
 ## Versioning
 
-`VERSION` holds the app version (semver). Add a `## <version>` section to `CHANGELOG.md` for each version: the release workflow fails without it. Note user-visible changes there. Pushes to `master` publish `v<version>`, and pushes without a bump replace the zip of that release.
+`VERSION` holds the app version (semver). Add a `## <version>` section to `CHANGELOG.md` for each version: the release workflow fails without it. Note user-visible changes there. Pushes to `master` publish `v<version>`, and pushes without a bump replace the zip of that release. The workflow then writes the Homebrew cask `Casks/pbs-timekeeper.rb` to `<owner>/homebrew-tap` (the tap that has the client formula), if the `HOMEBREW_TAP_TOKEN` secret is set. The cask uses Homebrew 7's declarative `preflight_steps` (plain `postflight` blocks fail `brew style`), check changes with `brew style` on a generated cask. The release needs the client release named in `CLIENT_VERSION`.
 
 ## Naming
 
