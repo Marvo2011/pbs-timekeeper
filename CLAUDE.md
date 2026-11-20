@@ -33,7 +33,7 @@ PBS_CLIENT=../proxmox-backup-client-mac/target/release/proxmox-backup-client ./s
 
 ## Client facts the app relies on
 
-- One snapshot per run: `backup <archive>.pxar:<path> …` with `--backup-type host --backup-id <id> --change-detection-mode metadata`. Archive names (alphanumerics, `-`, `_`) are assigned once per folder and stored in the config, so they stay stable across snapshots.
+- One snapshot per run: `backup <archive>.pxar:<path> …` with `--backup-type host --backup-id <id> --change-detection-mode <metadata|legacy>` (metadata is the default, `AppConfig.changeDetection`). Archive names (alphanumerics, `-`, `_`) are assigned once per folder and stored in the config, so they stay stable across snapshots.
 - Split archives appear as `<name>.mpxar.didx` + `<name>.ppxar.didx`. `mount`/`restore` accept `<name>.pxar` for both kinds.
 - `restore` reads the whole archive sequentially, even with `--pattern` (hours for a large archive), while a mount reads only the chunks it needs. That is why the browser restores by copying from the mount.
 - FUSE-T cannot mount on paths containing `:`, so mounts live in `~/Library/Caches/PBSTimekeeper/Mounts/<epoch>-<archive>`.

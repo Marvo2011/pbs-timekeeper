@@ -20,7 +20,8 @@ or Apple Inc.
   retried after 15 minutes.
 - **Incremental**: every backup is a full snapshot on the server, but only
   changed files are read (metadata change detection) and only new data is
-  uploaded (deduplication).
+  uploaded (deduplication). The legacy mode, which reads all files on every
+  backup and stores one `.pxar` per folder, is available in the settings.
 - **Retention like you know it**: hourly snapshots for a day, daily ones for a
   month, weekly ones for a year (configurable). Older snapshots are pruned after
   each backup, the space is freed by the garbage collection on the server.

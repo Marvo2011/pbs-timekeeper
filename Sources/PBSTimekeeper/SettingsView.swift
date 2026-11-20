@@ -40,6 +40,7 @@ struct SettingsView: View {
 
 private struct GeneralSettings: View {
     @Environment(AppModel.self) private var model
+    @State private var showModeInfo = false
 
     var body: some View {
         @Bindable var model = model
@@ -54,6 +55,22 @@ private struct GeneralSettings: View {
                 }
                 .disabled(!model.config.automaticBackups)
                 Toggle("Open at login", isOn: $model.launchAtLogin)
+            }
+            Section("Change detection") {
+                Picker("Mode", selection: $model.config.changeDetection) {
+                    ForEach(ChangeDetectionMode.allCases, id: \.self) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                Text(ChangeDetectionInfo.summary(model.config.changeDetection))
+                    .font(.callout).foregroundStyle(.secondary)
+                if model.config.changeDetection == .legacy && model.config.intervalMinutes < 360 {
+                    Text("Legacy mode reads all files on every backup. With backups every \(model.config.intervalMinutes / 60) hour(s), large folders may keep the Mac busy most of the time.")
+                        .font(.callout).foregroundStyle(.orange)
+                }
+                Button("How do these modes work?") { showModeInfo = true }
+                    .buttonStyle(.link)
             }
             Section {
                 TextField("Backup ID", text: $model.config.backupID)
@@ -90,6 +107,7 @@ private struct GeneralSettings: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $showModeInfo) { ChangeDetectionInfo() }
     }
 }
 

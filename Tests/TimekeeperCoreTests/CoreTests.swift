@@ -89,6 +89,14 @@ import Testing
         #expect(inv.environment == ["HOME": "/Users/me", "PBS_PASSWORD": "secret", "PBS_FINGERPRINT": "aa:bb"])
     }
 
+    @Test func legacyMode() {
+        var config = config
+        config.changeDetection = .legacy
+        let args = builder(config).backup(folders: [BackupFolder(path: "/a", archiveName: "a")]).arguments
+        #expect(args.contains("legacy"))
+        #expect(!args.contains("metadata"))
+    }
+
     @Test func namespaceAndKeyfile() {
         var config = config
         config.server.namespace = "macs"
@@ -168,6 +176,11 @@ import Testing
         #expect(config.backupID == "x")
         #expect(config.intervalMinutes == 60)
         #expect(config.excludes == AppConfig.defaultExcludes)
+        #expect(config.changeDetection == .metadata)
+        let future = try JSONDecoder().decode(AppConfig.self, from: Data(#"{"changeDetection":"magic"}"#.utf8))
+        #expect(future.changeDetection == .metadata)
+        let legacy = try JSONDecoder().decode(AppConfig.self, from: Data(#"{"changeDetection":"legacy"}"#.utf8))
+        #expect(legacy.changeDetection == .legacy)
     }
 }
 

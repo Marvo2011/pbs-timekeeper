@@ -84,14 +84,14 @@ public struct CommandBuilder: Sendable {
         ClientInvocation(arguments: arguments, environment: environment)
     }
 
-    /// One snapshot with a pxar archive per folder. The metadata change detection reuses
-    /// unchanged files of the previous snapshot instead of reading them again.
+    /// One snapshot with a pxar archive per folder. The metadata change detection (default)
+    /// reuses unchanged files of the previous snapshot instead of reading them again.
     public func backup(folders: [BackupFolder]) -> ClientInvocation {
         var args = ["backup"]
         args += folders.map { "\($0.archiveName).pxar:\($0.path)" }
         args += connection
         args += ["--backup-type", "host", "--backup-id", config.backupID]
-        args += ["--change-detection-mode", "metadata"]
+        args += ["--change-detection-mode", config.changeDetection.rawValue]
         args += keyfile
         for pattern in config.excludes where !pattern.trimmed.isEmpty {
             args += ["--exclude", pattern.trimmed]

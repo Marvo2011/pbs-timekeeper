@@ -58,6 +58,22 @@ public struct Retention: Codable, Equatable, Sendable {
     }
 }
 
+/// How the client finds out what changed since the previous backup.
+public enum ChangeDetectionMode: String, Codable, CaseIterable, Sendable {
+    /// Split archives (`.mpxar` + `.ppxar`), unchanged files are reused from the previous
+    /// snapshot without reading them.
+    case metadata
+    /// One `.pxar` per folder, every file is read completely on every backup.
+    case legacy
+
+    public var title: String {
+        switch self {
+        case .metadata: "Metadata (recommended)"
+        case .legacy: "Legacy"
+        }
+    }
+}
+
 public struct AppConfig: Codable, Equatable, Sendable {
     public var server = ServerSettings()
     /// Backup ID of the snapshot group `host/<backupID>`.
@@ -68,6 +84,7 @@ public struct AppConfig: Codable, Equatable, Sendable {
     public var automaticBackups = true
     public var intervalMinutes = 60
     public var retention = Retention()
+    public var changeDetection = ChangeDetectionMode.metadata
     /// Optional encryption key file (`proxmox-backup-client key create`).
     public var keyfile = ""
     /// Path of proxmox-backup-client, empty to use the bundled one.
@@ -110,7 +127,7 @@ public struct AppConfig: Codable, Equatable, Sendable {
     // Decoding tolerates missing keys, so config files of older versions keep working.
     private enum CodingKeys: String, CodingKey {
         case server, backupID, folders, excludes, automaticBackups, intervalMinutes, retention,
-            keyfile, clientPath
+            changeDetection, keyfile, clientPath
     }
 
     public init(from decoder: Decoder) throws {
@@ -125,6 +142,10 @@ public struct AppConfig: Codable, Equatable, Sendable {
         intervalMinutes =
             try c.decodeIfPresent(Int.self, forKey: .intervalMinutes) ?? defaults.intervalMinutes
         retention = try c.decodeIfPresent(Retention.self, forKey: .retention) ?? defaults.retention
+        // an unknown mode (e.g. written by a newer version) falls back to the default
+        changeDetection =
+            (try? c.decodeIfPresent(ChangeDetectionMode.self, forKey: .changeDetection))
+            .flatMap { $0 } ?? defaults.changeDetection
         keyfile = try c.decodeIfPresent(String.self, forKey: .keyfile) ?? ""
         clientPath = try c.decodeIfPresent(String.self, forKey: .clientPath) ?? ""
     }

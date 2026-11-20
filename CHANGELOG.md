@@ -10,7 +10,9 @@ The release workflow takes the release notes from the section of the version in
   schedule (every hour by default), one pxar archive per folder in a snapshot
   of the group `host/<backup ID>`. Whole volumes are not backed up.
 - Incremental backups with the metadata change detection: unchanged files are
-  reused from the previous snapshot instead of being read again.
+  reused from the previous snapshot instead of being read again. The legacy
+  mode (one .pxar per folder, all files read on every backup) can be chosen in
+  Settings → General, which also explains both modes.
 - Old snapshots are pruned after each backup: 24 hourly, 30 daily and 52
   weekly by default.
 - Browser with a timeline of all snapshots. It mounts the archives read-only
