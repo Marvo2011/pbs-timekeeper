@@ -54,12 +54,39 @@ struct MenuContent: View {
                 NSWorkspace.shared.open(URL(fileURLWithPath: log))
             }
         }
+        Button("About PBS Timekeeper") { showAbout() }
         SettingsLink {
             Text("Settings…")
         }
         .keyboardShortcut(",")
         Button("Quit PBS Timekeeper") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
+    }
+}
+
+extension MenuContent {
+    /// The standard about panel, with the version of the client in use.
+    private func showAbout() {
+        var credits = "proxmox-backup-client \(model.clientVersion ?? "(not found)")"
+        if !model.clientIsBundled, let path = model.clientURL?.path {
+            credits += "\n\(path)"
+        }
+        credits += "\n\nNot affiliated with Proxmox Server Solutions GmbH or Apple Inc."
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        NSApplication.bringToFront()
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .credits: NSAttributedString(
+                string: credits,
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+                    .foregroundColor: NSColor.secondaryLabelColor,
+                    .paragraphStyle: style,
+                ]),
+            .applicationVersion: Versions.app(),
+            // CFBundleVersion is the same, an empty build version avoids "0.1.0 (0.1.0)"
+            .version: "",
+        ])
     }
 }
 

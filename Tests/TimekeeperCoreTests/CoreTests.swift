@@ -334,3 +334,10 @@ final class LineSink: @unchecked Sendable {
         #expect(builder.paperKey(at: "/k.json", subject: "S").arguments == ["key", "paperkey", "/k.json", "--output-format", "html", "--subject", "S"])
     }
 }
+
+@Suite struct VersionTests {
+    @Test func parsesClientVersion() {
+        #expect(Versions.parseClient("client version: 4.2.10+20261120\n") == "4.2.10+20261120")
+        #expect(Versions.parseClient("garbage") == nil)
+    }
+}

@@ -34,6 +34,36 @@ final class AppModel {
     private(set) var backupGeneration = 0
     /// Checked at start and whenever the menu or settings open, it can change at any time.
     private(set) var hasFullDiskAccess = Paths.hasFullDiskAccess
+    /// Version reported by the client in use, nil while unknown.
+    private(set) var clientVersion: String?
+    private var clientVersionPath: String?
+
+    /// Asks the client for its version when it changed (another path in the settings).
+    func refreshClientVersion() {
+        guard let client = clientURL else {
+            clientVersion = nil
+            clientVersionPath = nil
+            return
+        }
+        guard client.path != clientVersionPath else { return }
+        clientVersionPath = client.path
+        clientVersion = nil
+        Task {
+            let version = await Versions.client(executable: client)
+            if clientVersionPath == client.path {
+                clientVersion = version
+            }
+        }
+    }
+
+    var clientIsBundled: Bool {
+        guard let client = clientURL,
+            let bundled = Bundle.main.url(forAuxiliaryExecutable: ClientLocator.executableName)
+        else {
+            return false
+        }
+        return client.standardizedFileURL == bundled.standardizedFileURL
+    }
 
     func refreshPermissions() {
         hasFullDiskAccess = Paths.hasFullDiskAccess
@@ -48,6 +78,7 @@ final class AppModel {
         state = JSONStore<BackupState>(url: Paths.state).load() ?? BackupState()
         Mounts.unmountAll()
         RunningClient.stopLeftover()
+        refreshClientVersion()
         startScheduler()
     }
 

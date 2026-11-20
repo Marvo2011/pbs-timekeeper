@@ -24,6 +24,8 @@ The release workflow takes the release notes from the section of the version in
   created without a password, and the paper key (key as text and QR code) can
   be printed and the key file saved elsewhere. A new key has to be confirmed
   as stored safely. An existing key is moved aside, never overwritten.
+- Settings → About and "About PBS Timekeeper" in the menu show the version of
+  the app and of the proxmox-backup-client in use (bundled or configured).
 - Password and encryption key password are stored in the Keychain.
 - Failed backups are retried after 15 minutes, then 30, 60, … up to 4 hours.
 - Quitting the app stops a running backup, and a client left behind by a

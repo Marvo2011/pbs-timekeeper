@@ -16,6 +16,8 @@ struct SettingsView: View {
                 .tabItem { Label("Folders", systemImage: "folder") }
             RetentionSettings()
                 .tabItem { Label("Retention", systemImage: "calendar") }
+            AboutSettings()
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 560, height: 460)
         .onAppear {
@@ -74,8 +76,10 @@ private struct GeneralSettings: View {
                 PathField(
                     title: "Path", placeholder: "bundled", path: $model.config.clientPath,
                     chooseDirectories: false)
+                    .onChange(of: model.config.clientPath) { model.refreshClientVersion() }
                 if let url = model.clientURL {
-                    Text("Using \(url.path)").font(.caption).foregroundStyle(.secondary)
+                    Text("Using \(model.clientVersion.map { "version \($0)" } ?? "version unknown"), \(model.clientIsBundled ? "bundled with the app" : url.path)")
+                        .font(.caption).foregroundStyle(.secondary)
                 } else {
                     Text("proxmox-backup-client was not found.").font(.caption).foregroundStyle(.red)
                 }
@@ -321,5 +325,51 @@ struct PathField: View {
                     .buttonStyle(.borderless)
             }
         }
+    }
+}
+
+private struct AboutSettings: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 72, height: 72)
+            Text("PBS Timekeeper").font(.title.bold())
+            Text("Version \(Versions.app())")
+                .textSelection(.enabled)
+            Text("Scheduled folder backups to a Proxmox Backup Server.")
+                .foregroundStyle(.secondary)
+
+            Form {
+                LabeledContent("PBS Timekeeper", value: Versions.app())
+                LabeledContent("proxmox-backup-client") {
+                    Text(model.clientVersion ?? (model.clientURL == nil ? "not found" : "unknown"))
+                        .textSelection(.enabled)
+                }
+                LabeledContent("Client location") {
+                    Text(model.clientIsBundled ? "bundled with the app" : model.clientURL?.path ?? "–")
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                }
+                if let bundled = Versions.bundledClient(), !model.clientIsBundled {
+                    LabeledContent("Bundled client", value: bundled.replacingOccurrences(of: "-", with: "+"))
+                }
+                LabeledContent("macOS", value: ProcessInfo.processInfo.operatingSystemVersionString)
+            }
+            .formStyle(.grouped)
+            .frame(maxHeight: 220)
+
+            HStack(spacing: 16) {
+                Link("PBS Timekeeper", destination: URL(string: "https://github.com/Marvo2011/pbs-timekeeper")!)
+                Link("proxmox-backup-client for macOS", destination: URL(string: "https://github.com/Marvo2011/proxmox-backup-client-mac")!)
+            }
+            .font(.callout)
+            Text("AGPL-3.0. Not affiliated with Proxmox Server Solutions GmbH or Apple Inc.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .padding()
+        .onAppear { model.refreshClientVersion() }
     }
 }
