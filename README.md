@@ -33,6 +33,10 @@ or Apple Inc.
   the mounted snapshot, which reads only the selected files from the server.
   Permissions and dates are kept, extended attributes and file flags are not
   (FUSE-T does not show them), use `proxmox-backup-client restore` for those.
+- **Remove** single backups from the server (trash button, context menu or ⌫
+  on the timeline). Protected snapshots and removing during a backup are
+  refused. Removing needs the `Datastore.Modify` privilege, or `Datastore.Prune`
+  on your own backup group.
 - Optional client-side **encryption**: create a key in the settings and print
   its paper key (text and QR code), or use an existing key file. Keep a copy of
   the key outside the Mac: without it, encrypted backups cannot be restored.

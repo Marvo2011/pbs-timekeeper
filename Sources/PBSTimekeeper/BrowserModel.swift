@@ -42,6 +42,8 @@ final class BrowserModel {
     var error: String?
     var showHidden = false
     private(set) var busyMessage: String?
+    /// The snapshot being removed.
+    private(set) var removing: Snapshot.ID?
     var lastRestored: URL?
 
     /// Mount points by snapshot path and archive.
@@ -99,6 +101,47 @@ final class BrowserModel {
         if snapshots.indices.contains(next) {
             selectedID = snapshots[next].id
         }
+    }
+
+    /// Why `snapshot` cannot be removed now, nil if it can.
+    func removalBlocker(_ snapshot: Snapshot) -> String? {
+        if snapshot.protected == true {
+            return "This backup is protected on the server."
+        }
+        if app.isBackingUp {
+            return "Backups cannot be removed while a backup is running."
+        }
+        if removing != nil {
+            return "Another backup is being removed."
+        }
+        return nil
+    }
+
+    /// Removes a snapshot from the server and selects its neighbour on the timeline.
+    func remove(_ snapshot: Snapshot) async {
+        guard removalBlocker(snapshot) == nil, let client = app.clientURL else { return }
+        removing = snapshot.id
+        defer { removing = nil }
+        let index = snapshots.firstIndex(of: snapshot)
+        // its mounts keep client processes open on the snapshot
+        for (key, url) in mounts where key.hasPrefix("\(snapshot.path)|") {
+            mounts[key] = nil
+            await Task.detached { Mounts.unmount(url) }.value
+        }
+        do {
+            try await ClientRunner.check(
+                executable: client, invocation: app.builder.forget(snapshot: snapshot.path),
+                logFile: Logs.newLogFile(prefix: "browse"))
+            Logs.prune(prefix: "browse", keep: 20)
+        } catch {
+            self.error = "Removing the backup failed: \(error.localizedDescription)"
+            return
+        }
+        if let index {
+            let rest = snapshots.filter { $0.id != snapshot.id }
+            selectedID = rest.isEmpty ? nil : rest[min(index, rest.count - 1)].id
+        }
+        await reload()
     }
 
     // MARK: Navigation

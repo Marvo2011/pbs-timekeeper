@@ -210,6 +210,12 @@ struct BrowserView: View {
 /// Snapshots from newest (top) to oldest, grouped by day, with buttons to step through time.
 private struct TimelineBar: View {
     @Bindable var browser: BrowserModel
+    @State private var confirmRemoval: Snapshot?
+
+    private var removalTitle: String {
+        guard let snapshot = confirmRemoval else { return "" }
+        return "Remove the backup of \(snapshot.date.formatted(date: .long, time: .shortened))?"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -221,6 +227,11 @@ private struct TimelineBar: View {
                     .help("Older backup")
                     .keyboardShortcut(.downArrow, modifiers: .command)
                 Spacer()
+                Button { confirmRemoval = browser.selected } label: {
+                    Image(systemName: "trash")
+                }
+                .help(browser.selected.flatMap(browser.removalBlocker) ?? "Remove this backup from the server")
+                .disabled(browser.selected.map { browser.removalBlocker($0) != nil } ?? true)
                 Button { Task { await browser.reload() } } label: {
                     Image(systemName: "arrow.clockwise")
                 }
@@ -239,9 +250,13 @@ private struct TimelineBar: View {
                     Section(Format.day(group.day)) {
                         ForEach(group.snapshots) { snapshot in
                             HStack(spacing: 8) {
-                                Capsule()
+                                if snapshot.id == browser.removing {
+                                    ProgressView().controlSize(.mini).frame(width: 22)
+                                } else {
+                                    Capsule()
                                     .fill(snapshot.id == browser.selectedID ? Color.accentColor : .secondary.opacity(0.5))
                                     .frame(width: snapshot.id == browser.selectedID ? 22 : 12, height: 3)
+                                }
                                 Text(snapshot.date.formatted(date: .omitted, time: .shortened))
                                     .monospacedDigit()
                                 Spacer()
@@ -250,11 +265,32 @@ private struct TimelineBar: View {
                                 }
                             }
                             .tag(snapshot.id)
+                            .contextMenu {
+                                Button("Remove Backup…") { confirmRemoval = snapshot }
+                                    .disabled(browser.removalBlocker(snapshot) != nil)
+                            }
                         }
                     }
                 }
             }
             .listStyle(.sidebar)
+            .onDeleteCommand {
+                if let snapshot = browser.selected, browser.removalBlocker(snapshot) == nil {
+                    confirmRemoval = snapshot
+                }
+            }
+            .alert(
+                removalTitle, isPresented: Binding(
+                    get: { confirmRemoval != nil }, set: { if !$0 { confirmRemoval = nil } }),
+                presenting: confirmRemoval
+            ) { snapshot in
+                Button("Remove", role: .destructive) {
+                    Task { await browser.remove(snapshot) }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("The backup is deleted on the server and its files can no longer be restored. Files that are also part of other backups stay available there. This cannot be undone.")
+            }
             Divider()
             Text("\(browser.snapshots.count) backups")
                 .font(.caption).foregroundStyle(.secondary)

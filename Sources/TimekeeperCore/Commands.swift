@@ -121,6 +121,11 @@ public struct CommandBuilder: Sendable {
         invocation(["snapshot", "list", group] + connection + ["--output-format", "json"])
     }
 
+    /// Removes a snapshot from the server.
+    public func forget(snapshot: String) -> ClientInvocation {
+        invocation(["snapshot", "forget", snapshot] + connection)
+    }
+
     /// Lists the groups of the datastore, used to test the connection settings.
     public func listGroups() -> ClientInvocation {
         invocation(["list"] + connection + ["--output-format", "json"])

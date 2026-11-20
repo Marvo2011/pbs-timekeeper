@@ -120,6 +120,12 @@ import Testing
         config.retention.weekly = 0
         #expect(builder(config).prune() == nil)
     }
+
+    @Test func forget() {
+        let args = builder(config).forget(snapshot: "host/mac/2026-01-01T00:00:00Z").arguments
+        #expect(args.starts(with: ["snapshot", "forget", "host/mac/2026-01-01T00:00:00Z", "--server"]))
+        #expect(!args.contains("--keyfile"))
+    }
 }
 
 @Suite struct SnapshotTests {

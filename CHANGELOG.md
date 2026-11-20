@@ -24,6 +24,9 @@ The release workflow takes the release notes from the section of the version in
   time and how much was read and uploaded. The browser shows it as "Now" on top
   of the timeline, with the folder being read and a stop button, and moves to
   the new snapshot when it is finished.
+- Single backups can be removed from the server in the browser (trash button,
+  context menu or ⌫ on the timeline), after a confirmation. Protected
+  snapshots cannot be removed, and nothing is removed while a backup runs.
 - Encryption key creation in Settings → Server, as in Proxmox VE: the key is
   created without a password, and the paper key (key as text and QR code) can
   be printed and the key file saved elsewhere. A new key has to be confirmed
