@@ -28,9 +28,10 @@ or Apple Inc.
   selected one on the left. The folder shown stays the same while you step
   through time (⌘↑ / ⌘↓), so finding the version before an accident is quick.
 - **Restore** files and folders to where they were (keep both or replace, the
-  replaced items go to the Trash) or to another folder. Restoring uses the
-  client's `restore`, so extended attributes, flags and permissions come back
-  as well.
+  replaced items go to the Trash) or to another folder. They are copied from
+  the mounted snapshot, which reads only the selected files from the server.
+  Permissions and dates are kept, extended attributes and file flags are not
+  (FUSE-T does not show them), use `proxmox-backup-client restore` for those.
 - Optional client-side **encryption** with a key file.
 - Passwords are stored in the **Keychain**.
 

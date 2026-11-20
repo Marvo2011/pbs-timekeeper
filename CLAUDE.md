@@ -23,7 +23,7 @@ PBS_CLIENT=../proxmox-backup-client-mac/target/release/proxmox-backup-client ./s
   - `Config.swift`: `AppConfig`, `BackupState`, `JSONStore`. Decoding must tolerate missing keys.
   - `Commands.swift`: `CommandBuilder`, all client command lines. Uses `--server`/`--port`/`--datastore`/`--auth-id` instead of `--repository`, and secrets go via `PBS_PASSWORD`/`PBS_ENCRYPTION_PASSWORD`/`PBS_FINGERPRINT` in the environment, never in arguments.
   - `ClientRunner.swift`: runs the client. Task cancellation sends SIGINT. After exit only buffered output is read, because `mount` leaves a daemon behind.
-  - `Mounts.swift`: FUSE-T mounts (`mount` daemonizes once ready, unmount with `umount`) and `Restorer`.
+  - `Mounts.swift`: FUSE-T mounts (`mount` daemonizes once ready, unmount with `umount`) and `Restorer`, which copies from a mount with `ditto`.
   - `Snapshot.swift`: `snapshot list --output-format json`.
   - `Schedule.swift`, `Folders.swift`, `Keychain.swift`, `Paths.swift`.
 - `Sources/PBSTimekeeper`: the app.
@@ -35,7 +35,7 @@ PBS_CLIENT=../proxmox-backup-client-mac/target/release/proxmox-backup-client ./s
 
 - One snapshot per run: `backup <archive>.pxar:<path> …` with `--backup-type host --backup-id <id> --change-detection-mode metadata`. Archive names (alphanumerics, `-`, `_`) are assigned once per folder and stored in the config, so they stay stable across snapshots.
 - Split archives appear as `<name>.mpxar.didx` + `<name>.ppxar.didx`. `mount`/`restore` accept `<name>.pxar` for both kinds.
-- `restore --pattern` uses pathpatterns syntax: `\` escapes `*?[]\`, a leading `/` anchors at the archive root, and a matching directory includes its contents.
+- `restore` reads the whole archive sequentially, even with `--pattern` (hours for a large archive), while a mount reads only the chunks it needs. That is why the browser restores by copying from the mount.
 - FUSE-T cannot mount on paths containing `:`, so mounts live in `~/Library/Caches/PBSTimekeeper/Mounts/<epoch>-<archive>`.
 - Child processes inherit the app's TCC permissions (Full Disk Access) as the app is the responsible process.
 

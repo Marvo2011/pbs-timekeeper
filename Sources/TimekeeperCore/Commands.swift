@@ -132,31 +132,4 @@ public struct CommandBuilder: Sendable {
     public func mount(snapshot: String, archive: String, target: URL) -> ClientInvocation {
         invocation(["mount", snapshot, "\(archive).pxar", target.path] + connection + keyfile)
     }
-
-    /// Restores the entry at `relativePath` (components below the archive root, empty for
-    /// the whole archive) into `target`, recreating its parent directories there.
-    public func restore(snapshot: String, archive: String, relativePath: [String], target: URL)
-        -> ClientInvocation
-    {
-        var args = ["restore", snapshot, "\(archive).pxar", target.path]
-        args += connection + keyfile
-        if !relativePath.isEmpty {
-            let path = "/" + relativePath.map(Self.escapePattern).joined(separator: "/")
-            // the entry itself and, for directories, everything below it
-            args += ["--pattern", path, "--pattern", path + "/**"]
-        }
-        return invocation(args)
-    }
-
-    /// Escapes the characters with a meaning in match patterns.
-    static func escapePattern(_ name: String) -> String {
-        var result = ""
-        for ch in name {
-            if "\\*?[]".contains(ch) {
-                result.append("\\")
-            }
-            result.append(ch)
-        }
-        return result
-    }
 }

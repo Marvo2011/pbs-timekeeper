@@ -97,36 +97,27 @@ public enum ConflictResolution: Sendable {
     case replace
 }
 
-/// Restores with `proxmox-backup-client restore`, which (unlike copying from a FUSE-T mount)
-/// brings back extended attributes, file flags and ownership.
+/// Restores by copying from the mounted snapshot. The mount reads only the chunks of the
+/// copied files, while `proxmox-backup-client restore` reads the whole archive sequentially
+/// even for a single file (hours for a large one). FUSE-T mounts do not show extended
+/// attributes and file flags, so these are not restored.
 public enum Restorer {
-    public static func restore(
-        executable: URL, builder: CommandBuilder, snapshot: Snapshot, archive: String,
-        relativePath: [String], into directory: URL, name: String,
-        conflict: ConflictResolution, logFile: URL? = nil
-    ) async throws -> URL {
+    public static func copy(
+        _ source: URL, into directory: URL, name: String, conflict: ConflictResolution
+    ) throws -> URL {
         let fm = FileManager.default
         try fm.createDirectory(at: directory, withIntermediateDirectories: true)
-        // restore next to the destination, so the final move stays on the same volume
+        // copy next to the destination first, so an interrupted copy leaves nothing behind
+        // and replacing is a move on the same volume
         let scratch = try fm.url(
             for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: directory,
             create: true)
         defer { try? fm.removeItem(at: scratch) }
 
-        let target = scratch.appending(path: "restore", directoryHint: .isDirectory)
-        try await ClientRunner.check(
-            executable: executable,
-            invocation: builder.restore(
-                snapshot: snapshot.path, archive: archive, relativePath: relativePath,
-                target: target),
-            logFile: logFile)
-
-        var restored = target
-        for component in relativePath {
-            restored.append(path: component)
-        }
-        guard fm.fileExists(atPath: restored.path) || isSymlink(restored) else {
-            throw ClientError("\(relativePath.last ?? archive) was not found in the backup.")
+        let staged = scratch.appending(path: name)
+        let (status, errors) = run("/usr/bin/ditto", [source.path, staged.path])
+        guard status == 0 else {
+            throw ClientError(errors.isEmpty ? "Copying \(name) failed." : errors)
         }
 
         var destination = directory.appending(path: name)
@@ -138,8 +129,26 @@ public enum Restorer {
                 destination = directory.appending(path: uniqueName(name, in: directory))
             }
         }
-        try fm.moveItem(at: restored, to: destination)
+        try fm.moveItem(at: staged, to: destination)
         return destination
+    }
+
+    static func run(_ tool: String, _ arguments: [String]) -> (Int32, String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: tool)
+        process.arguments = arguments
+        process.standardOutput = FileHandle.nullDevice
+        let stderr = Pipe()
+        process.standardError = stderr
+        do {
+            try process.run()
+        } catch {
+            return (-1, error.localizedDescription)
+        }
+        let output = stderr.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        let text = String(decoding: output, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        return (process.terminationStatus, text)
     }
 
     /// `Report (restored).pdf`, `Report (restored 2).pdf`, …

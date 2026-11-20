@@ -15,7 +15,9 @@ The release workflow takes the release notes from the section of the version in
   weekly by default.
 - Browser with a timeline of all snapshots. It mounts the archives read-only
   with FUSE-T, keeps the folder shown while moving through time, and restores
-  files and folders to their original place or a chosen folder.
+  files and folders to their original place or a chosen folder. Restoring
+  copies from the mount, so only the selected files are read from the server
+  (extended attributes and file flags are not restored).
 - Password and encryption key password are stored in the Keychain.
 - Failed backups are retried after 15 minutes, then 30, 60, … up to 4 hours.
 - Quitting the app stops a running backup, and a client left behind by a

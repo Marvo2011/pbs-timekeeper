@@ -112,16 +112,6 @@ import Testing
         config.retention.weekly = 0
         #expect(builder(config).prune() == nil)
     }
-
-    @Test func restorePatterns() {
-        let args = builder(config).restore(
-            snapshot: "s", archive: "a", relativePath: ["Fotos [alt]", "*.jpg"],
-            target: URL(fileURLWithPath: "/t")
-        ).arguments
-        #expect(args.suffix(4) == ["--pattern", "/Fotos \\[alt\\]/\\*.jpg", "--pattern", "/Fotos \\[alt\\]/\\*.jpg/**"])
-        let whole = builder(config).restore(snapshot: "s", archive: "a", relativePath: [], target: URL(fileURLWithPath: "/t")).arguments
-        #expect(!whole.contains("--pattern"))
-    }
 }
 
 @Suite struct SnapshotTests {
@@ -213,6 +203,30 @@ import Testing
 }
 
 @Suite struct RestorerTests {
+    @Test func copiesAndResolvesConflicts() throws {
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appending(path: "tk-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: dir) }
+        let source = dir.appending(path: "mount/Folder")
+        try fm.createDirectory(at: source.appending(path: "sub"), withIntermediateDirectories: true)
+        try "new".write(to: source.appending(path: "sub/file.txt"), atomically: true, encoding: .utf8)
+        let target = dir.appending(path: "target")
+        try fm.createDirectory(at: target.appending(path: "Folder"), withIntermediateDirectories: true)
+
+        let kept = try Restorer.copy(source, into: target, name: "Folder", conflict: .keepBoth)
+        #expect(kept.lastPathComponent == "Folder (restored)")
+        #expect(try String(contentsOf: kept.appending(path: "sub/file.txt"), encoding: .utf8) == "new")
+        #expect(fm.fileExists(atPath: target.appending(path: "Folder").path))
+
+        let fresh = try Restorer.copy(
+            source.appending(path: "sub/file.txt"), into: target.appending(path: "a/b"), name: "file.txt",
+            conflict: .keepBoth)
+        #expect(fresh.path.hasSuffix("target/a/b/file.txt"))
+        #expect(throws: ClientError.self) {
+            try Restorer.copy(dir.appending(path: "missing"), into: target, name: "x", conflict: .keepBoth)
+        }
+    }
+
     @Test func uniqueNames() throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: "tk-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

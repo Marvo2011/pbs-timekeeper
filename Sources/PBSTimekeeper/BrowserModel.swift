@@ -72,7 +72,9 @@ final class BrowserModel {
         defer { loadingSnapshots = false }
         do {
             let result = try await ClientRunner.check(
-                executable: client, invocation: app.builder.listSnapshots())
+                executable: client, invocation: app.builder.listSnapshots(),
+                logFile: Logs.newLogFile(prefix: "browse"))
+            Logs.prune(prefix: "browse", keep: 20)
             let list = try Snapshot.parseList(Data(result.stdout.utf8))
             snapshots = list
             if selectedID == nil || !list.contains(where: { $0.id == selectedID }) {
@@ -305,30 +307,30 @@ final class BrowserModel {
         }
     }
 
-    /// Restores to `destination`, or to the original folders if nil.
+    /// Restores to `destination`, or to the original folders if nil, by copying from the
+    /// mounted snapshot.
     func restore(_ items: [RestoreItem], to destination: URL?, conflict: ConflictResolution) async {
-        guard let snapshot = selected, let client = app.clientURL else { return }
-        let builder = app.builder
-        let log = Logs.newLogFile(prefix: "restore")
+        guard let snapshot = selected else { return }
         var restored: [URL] = []
         for item in items {
             guard let dir = destination ?? item.originalDirectory else {
                 error = "The original folder of \(item.name) is unknown, use Restore To…"
                 continue
             }
-            busyMessage = "Restoring \(item.name)…"
             do {
-                let url = try await Restorer.restore(
-                    executable: client, builder: builder, snapshot: snapshot,
-                    archive: item.archive, relativePath: item.relativePath, into: dir,
-                    name: item.name, conflict: conflict, logFile: log)
+                let root = try await mountPoint(snapshot: snapshot, archive: item.archive)
+                let source = item.relativePath.reduce(root) { $0.appending(path: $1) }
+                busyMessage = "Restoring \(item.name)…"
+                let name = item.name
+                let url = try await Task.detached {
+                    try Restorer.copy(source, into: dir, name: name, conflict: conflict)
+                }.value
                 restored.append(url)
             } catch {
                 self.error = "Restoring \(item.name) failed: \(error.localizedDescription)"
             }
         }
         busyMessage = nil
-        Logs.prune(prefix: "restore", keep: 20)
         if !restored.isEmpty {
             NSWorkspace.shared.activateFileViewerSelecting(restored)
         }
